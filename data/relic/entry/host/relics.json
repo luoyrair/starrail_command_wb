@@ -1,0 +1,15 @@
+[
+  { "part": "头部", "attribute": "生命值", "id": 1 },
+  { "part": "手部", "attribute": "攻击力", "id": 1 },
+  { "part": "躯干", "attribute": "生命值百分比", "id": 1 },
+  { "part": "躯干", "attribute": "攻击力百分比", "id": 2 },
+  { "part": "躯干", "attribute": "防御力百分比", "id": 3 },
+  { "part": "躯干", "attribute": "暴击率", "id": 4 },
+  { "part": "躯干", "attribute": "暴击伤害", "id": 5 },
+  { "part": "躯干", "attribute": "治疗量加成", "id": 6 },
+  { "part": "躯干", "attribute": "效果命中", "id": 7 },
+  { "part": "脚部", "attribute": "生命值百分比", "id": 1 },
+  { "part": "脚部", "attribute": "攻击力百分比", "id": 2 },
+  { "part": "脚部", "attribute": "防御力百分比", "id": 3 },
+  { "part": "脚部", "attribute": "速度", "id": 4 }
+]

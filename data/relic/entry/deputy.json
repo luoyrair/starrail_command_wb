@@ -1,0 +1,14 @@
+[
+  { "attribute": "生命值", "id": 1 },
+  { "attribute": "攻击力", "id": 2 },
+  { "attribute": "防御力", "id": 3 },
+  { "attribute": "生命值百分比", "id": 4 },
+  { "attribute": "攻击力百分比", "id": 5 },
+  { "attribute": "防御力百分比", "id": 6 },
+  { "attribute": "速度", "id": 7 },
+  { "attribute": "暴击率", "id": 8 },
+  { "attribute": "暴击伤害", "id": 9 },
+  { "attribute": "效果命中", "id": 10 },
+  { "attribute": "效果抵抗", "id": 11 },
+  { "attribute": "击破特攻", "id": 12 }
+]

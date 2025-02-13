@@ -1,0 +1,17 @@
+[
+  { "part": "位面球", "attribute": "生命值百分比", "id": 1 },
+  { "part": "位面球", "attribute": "攻击力百分比", "id": 2 },
+  { "part": "位面球", "attribute": "防御力百分比", "id": 3 },
+  { "part": "位面球", "attribute": "物理属性伤害提高", "id": 4 },
+  { "part": "位面球", "attribute": "火属性伤害提高", "id": 5 },
+  { "part": "位面球", "attribute": "冰属性伤害提高", "id": 6 },
+  { "part": "位面球", "attribute": "雷属性伤害提高", "id": 7 },
+  { "part": "位面球", "attribute": "风属性伤害提高", "id": 8 },
+  { "part": "位面球", "attribute": "量子属性伤害提高", "id": 9 },
+  { "part": "位面球", "attribute": "虚数属性伤害提高", "id": 10 },
+  { "part": "连结绳", "attribute": "击破特攻", "id": 1 },
+  { "part": "连结绳", "attribute": "能量恢复效率", "id": 2 },
+  { "part": "连结绳", "attribute": "生命值百分比", "id": 3 },
+  { "part": "连结绳", "attribute": "攻击力百分比", "id": 4 },
+  { "part": "连结绳", "attribute": "防御力百分比", "id": 5 }
+]

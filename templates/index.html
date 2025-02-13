@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>遗器命令生成器</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <style>
+        /* 添加 CSS 样式 */
+        .form-container {
+            display: flex;
+            flex-direction: row;
+            gap: 20px; /* 设置选择栏之间的间距 */
+            align-items: center; /* 垂直居中 */
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px; /* 设置标签和选择栏之间的间距 */
+        }
+
+        .form-group label {
+            font-weight: bold;
+        }
+
+        /* 按钮和命令的容器 */
+        .action-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* 设置按钮和命令之间的间距 */
+            margin-left: 20px; /* 与等级选择栏的间距 */
+        }
+
+        /* 主属性和副属性容器 */
+        .attributes-container {
+            margin-top: 20px;
+            display: flex;
+            gap: 50px; /* 主属性和副属性之间的间距 */
+        }
+
+        .attributes-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .attribute-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .attribute-row input[type="number"] {
+            width: 50px;
+        }
+    </style>
+</head>
+<body>
+    <h1>遗器命令生成器</h1>
+    <form id="commandForm">
+        <!-- 将选择栏包裹在一个容器中 -->
+        <div class="form-container">
+            <!-- 类别选择栏 -->
+            <div class="form-group">
+                <label for="category">类别:</label>
+                <select id="category" name="category" onchange="updateSets()">
+                    <option value="隧洞遗器">隧洞遗器</option>
+                    <option value="位面饰品">位面饰品</option>
+                </select>
+            </div>
+
+            <!-- 套装选择栏 -->
+            <div class="form-group">
+                <label for="set">套装:</label>
+                <select id="set" name="set" onchange="updateParts()">
+                    <option value="">请选择</option>
+                </select>
+            </div>
+
+            <!-- 部位选择栏 -->
+            <div class="form-group">
+                <label for="part">部位:</label>
+                <select id="part" name="part" onchange="loadAttributes()">
+                    <option value="">请选择</option>
+                </select>
+            </div>
+
+            <!-- 等级选择栏 -->
+            <div class="form-group">
+                <label for="level">等级:</label>
+                <input type="number" id="level" name="level" min="0" max="15" value="0">
+            </div>
+
+            <!-- 按钮和生成的命令 -->
+            <div class="action-container">
+                <button type="button" onclick="generateCommand()">生成命令</button>
+                <button type="button" onclick="copyCommand()">复制命令</button>
+                <div id="copyCommandText" style="display: none;">复制的命令：</div>
+                <pre id="commandOutput"></pre>
+            </div>
+        </div>
+
+        <!-- 主属性和副属性容器 -->
+        <div id="attributesContainer" class="attributes-container">
+            <!-- 主属性 -->
+            <div id="mainAttributes" class="attributes-section">
+                <h3>主属性</h3>
+            </div>
+
+            <!-- 副属性 -->
+            <div id="deputyAttributes" class="attributes-section">
+                <h3>副属性</h3>
+            </div>
+        </div>
+    </form>
+
+    <script>
+        // 从服务器获取数据
+        async function fetchData(category) {
+            const response = await fetch(`/api/data?category=${category}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch data');
+            }
+            return await response.json();
+        }
+        // 获取主属性数据
+        async function fetchMainAttributes(category) {
+            const response = await fetch(`/api/data/entry/host?category=${category}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch main attributes');
+            }
+            const data = await response.json();
+            return data; // 返回有序的数组
+        }
+
+        // 获取副属性数据
+        async function fetchDeputyAttributes() {
+            const response = await fetch('/api/data/entry/deputy?category=隧洞遗器'); // 副属性是通用的
+            if (!response.ok) {
+                throw new Error('Failed to fetch deputy attributes');
+            }
+            const data = await response.json();
+            return data; // 返回有序的数组
+        }
+
+        // 更新套装选项
+        async function updateSets() {
+            const category = document.getElementById('category').value;
+            const setSelect = document.getElementById('set');
+            setSelect.innerHTML = '<option value="">请选择</option>';
+
+            try {
+                const data = await fetchData(category);
+                for (const set of Object.keys(data)) {
+                    const option = document.createElement('option');
+                    option.value = set;
+                    option.textContent = set;
+                    setSelect.appendChild(option);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+
+            // 清除所有复选框
+            clearCheckboxes();
+        }
+
+        // 更新部位选项
+        function updateParts() {
+            const category = document.getElementById('category').value;
+            const set = document.getElementById('set').value;
+            const partSelect = document.getElementById('part');
+            partSelect.innerHTML = '<option value="">请选择</option>';
+
+            fetchData(category).then(data => {
+                if (set in data) {
+                    const parts = data[set];
+                    for (const part in parts) {
+                        const option = document.createElement('option');
+                        option.value = part;
+                        option.textContent = part;
+                        partSelect.appendChild(option);
+                    }
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+            });
+
+            // 清除所有复选框
+            clearCheckboxes();
+        }
+
+        // 加载主属性和副属性
+        async function loadAttributes() {
+            const part = document.getElementById('part').value;
+            const category = document.getElementById('category').value;
+            if (!part || !category) return;
+
+            // 清空现有内容
+            document.getElementById('mainAttributes').innerHTML = '<h3>主属性</h3>';
+            document.getElementById('deputyAttributes').innerHTML = '<h3>副属性</h3>';
+
+            try {
+                // 获取主属性数据
+                const mainAttributesData = await fetchMainAttributes(category);
+                // 确保 mainAttributesData 是一个数组
+                if (!Array.isArray(mainAttributesData)) {
+                    console.error('Main attributes data is not an array:', mainAttributesData);
+                    return; // 退出函数
+                }
+                // 筛选与 part 匹配的主属性
+                const mainAttributes = mainAttributesData.filter(attrObj => attrObj.part === part);
+
+                // 获取副属性数据
+                const deputyAttributesData = await fetchDeputyAttributes();
+
+                // 确保 mainAttributesData 是一个数组
+                if (!Array.isArray(mainAttributesData)) {
+                    console.error('Main attributes data is not an array:', mainAttributesData);
+                    return; // 退出函数
+                }
+
+                // 加载主属性
+                const mainContainer = document.getElementById('mainAttributes');
+                mainAttributes.forEach(attrObj => {
+                    const row = document.createElement('div');
+                    row.className = 'attribute-row';
+                    row.innerHTML = `
+                        <input type="checkbox"
+                               id="main_${attrObj.attribute}"
+                               name="main_${attrObj.attribute}"
+                               onchange="handleMainAttributeChange(this)"
+                               title="点击选中">
+                        <label for="main_${attrObj.attribute}">${attrObj.attribute}</label>
+                    `;
+                    mainContainer.appendChild(row);
+                });
+
+                // 加载副属性
+                const deputyContainer = document.getElementById('deputyAttributes');
+                deputyAttributesData.forEach(attrObj => {
+                    const row = document.createElement('div');
+                    row.className = 'attribute-row';
+                    row.innerHTML = `
+                        <input type="checkbox"
+                               id="deputy_${attrObj.attribute}"
+                               name="deputy_${attrObj.attribute}"
+                               onchange="handleDeputyAttributeChange()"
+                               title="点击选中">
+                        <label for="deputy_${attrObj.attribute}">${attrObj.attribute}</label>
+                        <input type="number"
+                               id="deputy_${attrObj.attribute}_value"
+                               name="deputy_${attrObj.attribute}_value"
+                               min="1"
+                               value="1"
+                               title="输入${attrObj.attribute}的值" placeholder="1">
+                        <button type="button" onclick="increment('deputy_${attrObj.attribute}_value')">+</button>
+                        <button type="button" onclick="decrement('deputy_${attrObj.attribute}_value')">-</button>
+                    `;
+                    deputyContainer.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error:', error);
+            }
+
+            // 清除所有复选框
+            clearCheckboxes();
+        }
+
+        // 增加副属性等级
+        function increment(id) {
+            const input = document.getElementById(id);
+            input.value = parseInt(input.value) + 1;
+        }
+
+        // 减少副属性等级
+        function decrement(id) {
+            const input = document.getElementById(id);
+            if (input.value > 1) {
+                input.value = parseInt(input.value) - 1;
+            }
+        }
+
+        // 处理主属性选择
+        function handleMainAttributeChange(checkbox) {
+            const checkboxes = document.querySelectorAll('#mainAttributes input[type="checkbox"]');
+            checkboxes.forEach((cb) => {
+                if (cb !== checkbox) {
+                    cb.checked = false; // 取消其他复选框的选择
+                }
+            });
+        }
+
+        // 处理副属性选择
+        function handleDeputyAttributeChange() {
+            const checkboxes = document.querySelectorAll('#deputyAttributes input[type="checkbox"]');
+            const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+
+            checkboxes.forEach((cb) => {
+                if (selectedCount >= 4 && !cb.checked) {
+                    cb.disabled = true; // 禁用未选中的复选框
+                } else {
+                    cb.disabled = false; // 否则可用
+                }
+            });
+        }
+
+        // 生成命令
+        function generateCommand() {
+            const form = document.getElementById('commandForm');
+            const formData = new FormData(form);
+            const data = {};
+
+            // 验证副属性输入框的值
+            let isValid = true;
+            const deputyValueInputs = document.querySelectorAll('input[id^="deputy_"][id$="_value"]');
+            deputyValueInputs.forEach(input => {
+                const value = parseInt(input.value);
+                if (isNaN(value) || value < 1) {
+                    isValid = false;
+                    input.style.border = '1px solid red';  // 标记不合法的输入框
+                } else {
+                    input.style.border = '';  // 清除标记
+                }
+            });
+
+            if (!isValid) {
+                alert('副属性的值必须为大于等于 1 的数字！');
+                return;  // 阻止提交
+            }
+
+            // 将 FormData 转换为普通对象
+            formData.forEach((value, key) => {
+                // 处理复选框的值
+                if (key.endsWith('_value')) {
+                    data[key] = value;
+                } else if (!key.endsWith('_value')) {
+                    if (key.startsWith('main_') || key.startsWith('deputy_')) {
+                        data[key] = value === 'on'; // 将 "on" 转换为 true，其他值转换为 false
+                    } else {
+                        data[key] = value;
+                    }
+                }
+            });
+
+            // 添加类别、套装、部位和等级
+            data['category'] = document.getElementById('category').value;
+            data['set'] = document.getElementById('set').value;
+            data['part'] = document.getElementById('part').value;
+            data['level'] = document.getElementById('level').value;
+
+            fetch('/get_command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json; charset=utf-8',
+                },
+                body: JSON.stringify(data),  // 转换为 JSON 字符串
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.command) {
+                    document.getElementById('commandOutput').textContent = data.command;
+                } else {
+                    document.getElementById('commandOutput').textContent = 'Error: ' + data.error;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('commandOutput').textContent = 'Error: ' + error.message;
+            });
+        }
+
+        // 复制命令到剪贴板
+        function copyCommand() {
+            const commandOutput = document.getElementById('commandOutput').textContent;
+            if (commandOutput) {
+                navigator.clipboard.writeText(commandOutput)
+                    .then(() => {
+                        // 显示“复制的命令：”提示
+                        const copyCommandText = document.getElementById('copyCommandText');
+                        copyCommandText.style.display = 'block';
+                        copyCommandText.textContent = `复制的命令：${commandOutput}`;
+                        alert('命令已复制到剪贴板！');
+                    })
+                    .catch(err => {
+                        console.error('复制失败:', err);
+                        alert('复制失败，请手动复制命令。');
+                    });
+            } else {
+                alert('没有可复制的命令，请先生成命令。');
+            }
+        }
+
+        // 清除所有复选框的选中状态
+        function clearCheckboxes() {
+            // 清除主属性复选框
+            const mainCheckboxes = document.querySelectorAll('#mainAttributes input[type="checkbox"]');
+            mainCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+
+            // 清除副属性复选框
+            const deputyCheckboxes = document.querySelectorAll('#deputyAttributes input[type="checkbox"]');
+            deputyCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+
+        window.onload = function() {
+            // 调用你想要在页面加载时执行的函数
+            const category = document.getElementById('category').value;
+            if (category) {
+                updateSets(); // 或者你可以调用其他相关函数
+            }
+        };
+    </script>
+</body>
+</html>
